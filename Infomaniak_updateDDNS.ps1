@@ -3,9 +3,10 @@
 #Start-Transcript -path "c:\ddns\logs\transcript.txt" -append
 $hostname = "subdomain.mydomain.tld"
 
-# you can choose another website like apify but need to adapt the powershell object
-#ifconfig return only the ip this is why i choose it.
-$ip = curl ifconfig.me
+#ifconfig.me show ipv6 instead of ipv4 
+#$ip = curl ifconfig.me
+
+$ip = curl api.ipify.org
 $username = "myusername"
 $password = "mysuperpassword"
 

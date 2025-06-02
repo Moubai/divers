@@ -64,7 +64,7 @@ $path = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced\Taskb
 New-ItemProperty -Path $path -Name $name -PropertyType DWord -Value $value -Force | Out-Null
 
 #region ajout fichier profil avec quickterm pour oh-my-posh
-if (-not (test-path $PROFILE){ New-item -Path $PROFILE -type File -Force}
+if (-not (test-path $PROFILE)){ New-item -Path $PROFILE -type File -Force}
 add-content -path $PROFILE -value 'oh-my-posh init pwsh --config "$env:POSH_THEMES_PATH/quick-term.omp.json" | Invoke-Expression"'
 add-content -path $PROFILE -value "Import-module -Name Terminal-Icons"
 #end region

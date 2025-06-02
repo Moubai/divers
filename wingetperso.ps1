@@ -15,26 +15,28 @@ Set-ExecutionPolicy -ExecutionPolicy Bypass
 
 #installation pc martin après fresh install windows
 $ListeSoftware =  @(
-	'Microsoft.PowerShell'
-	#'Microsoft.VisualStudioCode'
+  'Microsoft.PowerShell'
+  #'Microsoft.VisualStudioCode'
   'JanDeDobbeleer.OhMyPosh'
   'Daum.PotPlayer'
   #'Devolutions.RemoteDesktopManagerFree'
   'Notepad++.Notepad++'
   'Mozilla.Firefox'
-	'CodecGuide.K-LiteCodecPack.Standard'
-	'obsidian.obsidian'
-	'variar.klogg'
-	'SumatraPDF.SumatraPDF'
-	'ShareX.ShareX'
-	#'OBSProject.OBSStudio'
-	'Microsoft.PowerToys'
-	'Ferdium.Ferdium'
-	'Bitwarden.Bitwarden'
-	'brave.brave'
-	'7zip.7zip'
-	#'KeePassXCTeam.KeePassXC'
+  'CodecGuide.K-LiteCodecPack.Standard'
+  'obsidian.obsidian'
+  'variar.klogg'
+  'SumatraPDF.SumatraPDF'
+  'ShareX.ShareX'
+  #'OBSProject.OBSStudio'
+  'Microsoft.PowerToys'
+  'Ferdium.Ferdium'
+  'Bitwarden.Bitwarden'
+  'brave.brave'
+  '7zip.7zip'
+  'JanDeDobbeleer.OhMyPosh'
+  #'KeePassXCTeam.KeePassXC'
 )
+Install-module terminal-icons -force
 
 Foreach($app in $listesoftware){
 	winget install --id $app --accept-package-agreements
@@ -49,6 +51,36 @@ Write-Host "activer le numpad au boot"
 Set-ItemProperty -Path 'Registry::HKU\.DEFAULT\Control Panel\Keyboard' -Name "InitialKeyboardIndicators" -Value "2"
 Write-Host "Clé de registre activée, reboot nécessaire" -foregroundcolor green
 
-#install terminal-icons for oh-my-posh
-Install-module -name Terminal-Icons -Repository PSGallery
+Write-Host "activer terminer la tâche avec le clic droit dans la barre des tâches"
+$path = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced\TaskbarDeveloperSettings"
+      $name = "TaskbarEndTask"
+      $value = 1
+
+      # Ensure the registry key exists
+      if (-not (Test-Path $path)) {
+        New-Item -Path $path -Force | Out-Null
+      }
+      # Set the property, creating it if it doesn't exist
+New-ItemProperty -Path $path -Name $name -PropertyType DWord -Value $value -Force | Out-Null
+
+#region ajout fichier profil avec quickterm pour oh-my-posh
+if (-not (test-path $PROFILE){ New-item -Path $PROFILE -type File -Force}
+$PoshTheme = "oh-my-posh init pwsh --config \"$env:POSH_THEMES_PATH/quick-term.omp.json\" | Invoke-Expression"
+add-content -path $PROFILE -value 'oh-my-posh init pwsh --config "$env:POSH_THEMES_PATH/quick-term.omp.json" | Invoke-Expression"'
+add-content -path $PROFILE -value "Import-module -Name Terminal-Icons"
+#end region
+#oh-my-posh install fonts
+oh-my-posh font install meslo
+
+#add font to terminal
+$jsonFilePath = "$env:LOCALAPPDATA\Packages\Microsoft.WindowsTerminal_8wekyb3d8bbwe\LocalState\settings.json"
+if(-not (test-path $jsonFilePath)){
+	Write-Host "veuillez lancer une première fois le terminal"
+}
+else{
+	$JsonContent = Get-Content -path $jsonFilePath -raw | convertFrom-Json
+ 	$JsonContant.profiles.defaults.font.face = "MesloLGL Nerd Font"
+}
+
+
 

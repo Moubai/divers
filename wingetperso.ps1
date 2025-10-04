@@ -24,6 +24,8 @@ $ListeSoftware =  @(
   #'brave.brave'
   #'7zip.7zip'
   #'KeePassXCTeam.KeePassXC'
+  #dolby digital plus decode for pc oem (plex fix)
+  #'9NVJQJBDKN97'
 )
 Write-Host "ajout du module terminal-icons pour oh-my-posh" -foregroundcolor Yellow
 Install-module terminal-icons -force

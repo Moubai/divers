@@ -1,3 +1,4 @@
+#requier de DL mediainfo CLI , binaire direct en date de février 2026 > https://mediaarea.net/download/binary/mediainfo/26.01/MediaInfo_CLI_26.01_Windows_x64.zip
 $mediaInfoPath = "Z:\EmplacementduDossier\MediaInfo_CLI_25.10_Windows_x64\MediaInfo.exe"  # Remplace par le chemin vers MediaInfo CLI
 $videoExtensions = @("*.mp4", "*.mkv", "*.avi", "*.mov")  # Extensions à traiter
 $outputFolder = "H:\monDossierContenantlesvideos\"  # Dossier contenant les vidéos

@@ -1,7 +1,7 @@
 $mediaInfoPath = "Z:\EmplacementduDossier\MediaInfo_CLI_25.10_Windows_x64\MediaInfo.exe"  # Remplace par le chemin vers MediaInfo CLI
 $videoExtensions = @("*.mp4", "*.mkv", "*.avi", "*.mov")  # Extensions à traiter
-$outputFolder = "H:\monDossierContenantlesvideos"  # Dossier contenant les vidéos
-$outputFile = "$outputFolder\Stargate-SG1.S10.nfo"  # Fichier de sortie unique
+$outputFolder = "H:\monDossierContenantlesvideos\"  # Dossier contenant les vidéos
+$outputFile = "$outputFolder\MaSerieFull.nfo"  # Fichier de sortie unique
 
 # Initialise le fichier NFO
 New-Item -Path $outputFile -ItemType File -Force | Out-Null

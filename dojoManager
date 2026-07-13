@@ -1,0 +1,1290 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#C41E3A">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Dojo Manager">
+  <title>Dojo Manager</title>
+  <link rel="manifest" id="manifest-link">
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;900&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: { display: ['Cinzel','serif'], body: ['Outfit','sans-serif'] }
+        }
+      }
+    }
+  </script>
+  <style>
+    :root {
+      --bg:#0A0A0A;--bg2:#111;--card:#161616;--card-h:#1E1E1E;
+      --fg:#F0EDE8;--fg2:#B0ADA8;--muted:#5A5A5A;
+      --accent:#C41E3A;--accent-l:#E8334F;--accent-d:#8B1528;
+      --border:#252525;--success:#27AE60;--warning:#F39C12;--danger:#E74C3C;
+    }
+    *{box-sizing:border-box;margin:0;padding:0;}
+    body{font-family:'Outfit',sans-serif;background:var(--bg);color:var(--fg);overflow:hidden;height:100dvh;-webkit-tap-highlight-color:transparent;}
+    ::-webkit-scrollbar{width:4px;}
+    ::-webkit-scrollbar-track{background:transparent;}
+    ::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px;}
+
+    /* Fond animé */
+    #app::before{
+      content:'';position:fixed;top:-50%;left:-50%;width:200%;height:200%;
+      background:radial-gradient(ellipse at 30% 20%,rgba(196,30,58,.06) 0%,transparent 50%),
+                 radial-gradient(ellipse at 70% 80%,rgba(196,30,58,.04) 0%,transparent 50%);
+      animation:bgDrift 20s ease-in-out infinite alternate;z-index:0;pointer-events:none;
+    }
+    @keyframes bgDrift{0%{transform:translate(0,0) rotate(0deg)}100%{transform:translate(-5%,3%) rotate(2deg)}}
+
+    /* Kanji filigrane */
+    #app::after{
+      content:'道';position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);
+      font-size:min(80vw,80vh);color:rgba(196,30,58,.025);font-family:serif;
+      pointer-events:none;z-index:0;line-height:1;
+    }
+
+    #app{display:flex;flex-direction:column;height:100dvh;position:relative;z-index:1;}
+
+    /* Header */
+    .app-header{
+      flex-shrink:0;height:56px;display:flex;align-items:center;justify-content:space-between;
+      padding:0 16px;background:rgba(10,10,10,.85);backdrop-filter:blur(12px);
+      border-bottom:1px solid var(--border);z-index:10;
+    }
+    .app-header h1{font-family:'Cinzel',serif;font-size:18px;font-weight:700;letter-spacing:1px;}
+    .app-header h1 span{color:var(--accent);}
+
+    /* Contenu principal */
+    .app-content{
+      flex:1;overflow-y:auto;overflow-x:hidden;
+      padding:16px;padding-bottom:24px;
+      scroll-behavior:smooth;
+    }
+    .page-enter{animation:pageIn .3s ease-out;}
+    @keyframes pageIn{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+
+    /* Tab bar */
+    .tab-bar{
+      flex-shrink:0;height:64px;display:flex;align-items:center;justify-content:space-around;
+      background:rgba(10,10,10,.92);backdrop-filter:blur(16px);
+      border-top:1px solid var(--border);z-index:10;
+      padding-bottom:env(safe-area-inset-bottom);
+    }
+    .tab-btn{
+      display:flex;flex-direction:column;align-items:center;gap:3px;
+      background:none;border:none;color:var(--muted);font-size:10px;font-family:'Outfit',sans-serif;
+      cursor:pointer;transition:color .2s;padding:6px 12px;
+    }
+    .tab-btn i{font-size:18px;transition:transform .2s,color .2s;}
+    .tab-btn.active{color:var(--accent);}
+    .tab-btn.active i{transform:scale(1.15);}
+    .tab-btn:hover{color:var(--fg2);}
+
+    /* Cartes */
+    .card{
+      background:var(--card);border:1px solid var(--border);border-radius:12px;
+      padding:16px;transition:background .2s,border-color .2s;
+    }
+    .card:hover{background:var(--card-h);border-color:#333;}
+    .card-sm{padding:12px;border-radius:10px;}
+
+    /* Stat cards */
+    .stat-card{
+      background:var(--card);border:1px solid var(--border);border-radius:14px;
+      padding:16px;position:relative;overflow:hidden;
+    }
+    .stat-card::after{
+      content:'';position:absolute;top:0;right:0;width:60px;height:60px;
+      border-radius:0 14px 0 40px;opacity:.08;
+    }
+    .stat-card .stat-val{font-size:28px;font-weight:700;line-height:1.1;}
+    .stat-card .stat-label{font-size:12px;color:var(--muted);margin-top:4px;font-weight:500;text-transform:uppercase;letter-spacing:.5px;}
+    .stat-card .stat-icon{position:absolute;top:14px;right:14px;font-size:20px;opacity:.4;}
+
+    /* Boutons */
+    .btn{
+      display:inline-flex;align-items:center;gap:8px;padding:10px 20px;
+      border-radius:10px;font-family:'Outfit',sans-serif;font-weight:600;font-size:14px;
+      border:none;cursor:pointer;transition:all .2s;
+    }
+    .btn-primary{background:var(--accent);color:#fff;}
+    .btn-primary:hover{background:var(--accent-l);transform:translateY(-1px);}
+    .btn-secondary{background:var(--card);color:var(--fg);border:1px solid var(--border);}
+    .btn-secondary:hover{background:var(--card-h);border-color:#444;}
+    .btn-sm{padding:6px 12px;font-size:12px;border-radius:8px;}
+    .btn-danger{background:var(--danger);color:#fff;}
+    .btn-danger:hover{background:#c0392b;}
+    .btn-success{background:var(--success);color:#fff;}
+    .btn-success:hover{background:#219a52;}
+    .btn-icon{width:36px;height:36px;padding:0;display:flex;align-items:center;justify-content:center;border-radius:8px;font-size:14px;}
+    .btn:active{transform:scale(.96);}
+
+    /* Inputs */
+    .form-group{margin-bottom:14px;}
+    .form-label{display:block;font-size:12px;font-weight:600;color:var(--fg2);margin-bottom:6px;text-transform:uppercase;letter-spacing:.3px;}
+    .form-input,.form-select,.form-textarea{
+      width:100%;padding:10px 14px;background:var(--bg);border:1px solid var(--border);
+      border-radius:10px;color:var(--fg);font-family:'Outfit',sans-serif;font-size:14px;
+      transition:border-color .2s;outline:none;
+    }
+    .form-input:focus,.form-select:focus,.form-textarea:focus{border-color:var(--accent);}
+    .form-textarea{resize:vertical;min-height:80px;}
+    .form-select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%237A7A7A' viewBox='0 0 16 16'%3E%3Cpath d='M8 11L3 6h10z'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center;}
+    .form-select option{background:var(--bg);color:var(--fg);}
+
+    /* Modal */
+    .modal-overlay{
+      position:fixed;inset:0;background:rgba(0,0,0,.7);backdrop-filter:blur(4px);
+      z-index:100;display:none;align-items:flex-end;justify-content:center;
+      padding:0;
+    }
+    .modal-overlay.show{display:flex;}
+    .modal{
+      background:var(--bg2);border:1px solid var(--border);border-radius:20px 20px 0 0;
+      width:100%;max-width:500px;max-height:85dvh;overflow-y:auto;
+      padding:24px;padding-bottom:calc(24px + env(safe-area-inset-bottom));
+      animation:modalUp .3s ease-out;
+    }
+    @keyframes modalUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
+    .modal-handle{width:40px;height:4px;background:var(--border);border-radius:2px;margin:0 auto 16px;}
+    .modal-title{font-family:'Cinzel',serif;font-size:18px;font-weight:700;margin-bottom:20px;}
+
+    /* Toast */
+    #toast-container{position:fixed;top:68px;left:16px;right:16px;z-index:200;display:flex;flex-direction:column;gap:8px;pointer-events:none;}
+    .toast{
+      padding:12px 16px;border-radius:10px;font-size:13px;font-weight:500;
+      transform:translateY(-20px);opacity:0;transition:all .3s;pointer-events:auto;
+      display:flex;align-items:center;gap:10px;
+    }
+    .toast.show{transform:translateY(0);opacity:1;}
+    .toast-success{background:rgba(39,174,96,.15);border:1px solid rgba(39,174,96,.3);color:#2ecc71;}
+    .toast-error{background:rgba(231,76,60,.15);border:1px solid rgba(231,76,60,.3);color:#e74c3c;}
+    .toast-info{background:rgba(196,30,58,.15);border:1px solid rgba(196,30,58,.3);color:var(--accent-l);}
+
+    /* Ceinture visuelle */
+    .belt-stripe{width:5px;border-radius:3px;flex-shrink:0;}
+    .belt-badge{
+      display:inline-flex;align-items:center;gap:6px;padding:3px 10px 3px 6px;
+      border-radius:20px;font-size:11px;font-weight:600;
+      background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);
+    }
+    .belt-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;border:1px solid rgba(255,255,255,.15);}
+
+    /* Membre card */
+    .member-card{
+      display:flex;gap:12px;padding:14px;cursor:pointer;
+    }
+    .member-info{flex:1;min-width:0;}
+    .member-name{font-weight:600;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+    .member-meta{font-size:12px;color:var(--muted);margin-top:2px;display:flex;flex-wrap:wrap;gap:8px;align-items:center;}
+    .member-actions{display:flex;flex-direction:column;gap:6px;align-items:center;justify-content:center;}
+
+    /* Mode entraînement */
+    .training-btn{
+      flex:1;display:flex;align-items:center;justify-content:center;gap:10px;
+      padding:14px 16px;border-radius:12px;font-size:15px;font-weight:600;
+      border:2px solid var(--border);background:var(--card);color:var(--fg);
+      cursor:pointer;transition:all .25s;font-family:'Outfit',sans-serif;
+    }
+    .training-btn:hover{border-color:var(--accent);background:rgba(196,30,58,.08);}
+    .training-btn.checked{
+      border-color:var(--success);background:rgba(39,174,96,.12);color:var(--success);
+      pointer-events:none;
+    }
+
+    /* Grade timeline */
+    .grade-timeline{position:relative;padding-left:24px;}
+    .grade-timeline::before{content:'';position:absolute;left:7px;top:8px;bottom:8px;width:2px;background:var(--border);}
+    .grade-event{position:relative;margin-bottom:16px;}
+    .grade-event::before{
+      content:'';position:absolute;left:-20px;top:6px;width:10px;height:10px;
+      border-radius:50%;border:2px solid var(--accent);background:var(--bg);
+    }
+
+    /* Jeton indicator */
+    .jeton-bar{height:4px;border-radius:2px;background:var(--border);overflow:hidden;flex:1;max-width:60px;}
+    .jeton-bar-fill{height:100%;border-radius:2px;transition:width .3s;}
+
+    /* Search */
+    .search-box{
+      display:flex;align-items:center;gap:10px;padding:10px 14px;
+      background:var(--card);border:1px solid var(--border);border-radius:12px;
+    }
+    .search-box i{color:var(--muted);font-size:14px;}
+    .search-box input{
+      flex:1;background:none;border:none;outline:none;color:var(--fg);
+      font-family:'Outfit',sans-serif;font-size:14px;
+    }
+    .search-box input::placeholder{color:var(--muted);}
+
+    /* Toggle switch */
+    .toggle-wrap{display:flex;background:var(--card);border:1px solid var(--border);border-radius:10px;padding:3px;}
+    .toggle-opt{
+      flex:1;padding:8px 12px;text-align:center;font-size:12px;font-weight:600;
+      border-radius:8px;cursor:pointer;transition:all .2s;color:var(--muted);
+      border:none;background:none;font-family:'Outfit',sans-serif;
+    }
+    .toggle-opt.active{background:var(--accent);color:#fff;}
+
+    /* News card */
+    .news-card{padding:16px;}
+    .news-card .news-date{font-size:11px;color:var(--muted);font-weight:500;text-transform:uppercase;letter-spacing:.5px;}
+    .news-card .news-title{font-size:17px;font-weight:700;margin-top:6px;line-height:1.3;}
+    .news-card .news-excerpt{font-size:13px;color:var(--fg2);margin-top:8px;line-height:1.5;}
+    .news-card .news-actions{display:flex;gap:8px;margin-top:12px;}
+
+    /* Animations réduites */
+    @media(prefers-reduced-motion:reduce){
+      *,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important;}
+    }
+
+    /* Desktop */
+    @media(min-width:640px){
+      .app-content{max-width:540px;margin:0 auto;}
+      .modal{border-radius:20px;margin-bottom:20px;}
+      .modal-overlay{align-items:center;padding:20px;}
+    }
+
+    /* Empty state */
+    .empty-state{text-align:center;padding:40px 20px;color:var(--muted);}
+    .empty-state i{font-size:40px;margin-bottom:12px;opacity:.3;}
+    .empty-state p{font-size:14px;}
+  </style>
+</head>
+<body>
+
+<div id="app">
+  <!-- Header -->
+  <header class="app-header">
+    <h1>DOJO <span>Manager</span></h1>
+    <div id="header-action"></div>
+  </header>
+
+  <!-- Contenu principal -->
+  <main class="app-content" id="page-content"></main>
+
+  <!-- Barre de navigation -->
+  <nav class="tab-bar" role="tablist">
+    <button class="tab-btn active" data-page="dashboard" role="tab" aria-label="Accueil">
+      <i class="fas fa-home"></i><span>Accueil</span>
+    </button>
+    <button class="tab-btn" data-page="members" role="tab" aria-label="Membres">
+      <i class="fas fa-users"></i><span>Membres</span>
+    </button>
+    <button class="tab-btn" data-page="presence" role="tab" aria-label="Présence">
+      <i class="fas fa-ticket"></i><span>Présence</span>
+    </button>
+    <button class="tab-btn" data-page="grades" role="tab" aria-label="Grades">
+      <i class="fas fa-award"></i><span>Grades</span>
+    </button>
+    <button class="tab-btn" data-page="news" role="tab" aria-label="Actualités">
+      <i class="fas fa-newspaper"></i><span>News</span>
+    </button>
+  </nav>
+</div>
+
+<!-- Modal -->
+<div class="modal-overlay" id="modal-overlay" role="dialog" aria-modal="true">
+  <div class="modal" id="modal-content"></div>
+</div>
+
+<!-- Toasts -->
+<div id="toast-container" aria-live="polite"></div>
+
+<script>
+// ============================================================
+// SERVICE WORKER PWA (même fichier = page + SW)
+// ============================================================
+if (typeof window === 'undefined') {
+  // Contexte Service Worker
+  const CACHE = 'dojo-v2';
+  self.addEventListener('install', () => self.skipWaiting());
+  self.addEventListener('activate', e => e.waitUntil(self.clients.claim()));
+  self.addEventListener('fetch', e => {
+    e.respondWith(
+      fetch(e.request).then(r => {
+        if (r && r.ok) {
+          const c = r.clone();
+          caches.open(CACHE).then(cache => cache.put(e.request, c)).catch(() => {});
+        }
+        return r;
+      }).catch(() => caches.match(e.request))
+    );
+  });
+} else {
+  // ============================================================
+  // CONFIGURATION & CONSTANTES
+  // ============================================================
+  const GRADES = [
+    { name:'Blanche', color:'#EEEEEE', order:0 },
+    { name:'Jaune', color:'#F1C40F', order:1 },
+    { name:'Orange', color:'#E67E22', order:2 },
+    { name:'Verte', color:'#27AE60', order:3 },
+    { name:'Bleue', color:'#2980B9', order:4 },
+    { name:'Marron', color:'#8B4513', order:5 },
+    { name:'Noire 1er Dan', color:'#222222', order:6 },
+    { name:'Noire 2e Dan', color:'#222222', order:7 },
+    { name:'Noire 3e Dan', color:'#222222', order:8 },
+    { name:'Noire 4e Dan', color:'#222222', order:9 },
+    { name:'Noire 5e Dan', color:'#222222', order:10 },
+  ];
+  const PRIX_PACK = 50; // prix d'un pack de 10 jetons
+
+  // ============================================================
+  // DONNÉES & STOCKAGE
+  // ============================================================
+  const STORAGE_KEY = 'dojo-manager-data';
+  const uid = () => Date.now().toString(36) + Math.random().toString(36).substr(2,6);
+
+  // Données par défaut (premier lancement)
+  function defaultData() {
+    const m1=uid(),m2=uid(),m3=uid(),m4=uid(),m5=uid(),m6=uid();
+    return {
+      members: [
+        {id:m1,num:1,prenom:'Yuki',nom:'Tanaka',naissance:'1998-03-15',affiliation:'2023-09-01',grade:4,email:'yuki@mail.com',tel:'0612345678',jetons:7,actif:true},
+        {id:m2,num:2,prenom:'Pierre',nom:'Dubois',naissance:'2001-07-22',affiliation:'2023-09-01',grade:2,email:'pierre@mail.com',tel:'0623456789',jetons:3,actif:true},
+        {id:m3,num:3,prenom:'Amina',nom:'Benali',naissance:'1995-11-08',affiliation:'2023-09-15',grade:3,email:'amina@mail.com',tel:'0634567890',jetons:10,actif:true},
+        {id:m4,num:4,prenom:'Lucas',nom:'Moreau',naissance:'2005-01-30',affiliation:'2023-10-01',grade:1,email:'lucas@mail.com',tel:'0645678901',jetons:0,actif:true},
+        {id:m5,num:5,prenom:'Chloé',nom:'Laurent',naissance:'2000-05-14',affiliation:'2022-09-01',grade:5,email:'chloe@mail.com',tel:'0656789012',jetons:5,actif:true},
+        {id:m6,num:6,prenom:'Karim',nom:'Hadj',naissance:'1998-12-19',affiliation:'2024-09-01',grade:0,email:'karim@mail.com',tel:'0667890123',jetons:10,actif:true},
+      ],
+      transactions: [
+        {id:uid(),memberId:m1,type:'achat',qte:10,date:'2024-09-01T10:00:00',note:'Pack rentrée'},
+        {id:uid(),memberId:m2,type:'achat',qte:10,date:'2024-09-01T10:05:00',note:'Pack rentrée'},
+        {id:uid(),memberId:m3,type:'achat',qte:10,date:'2024-09-01T10:10:00',note:'Pack rentrée'},
+        {id:uid(),memberId:m5,type:'achat',qte:10,date:'2024-09-01T10:15:00',note:'Pack rentrée'},
+        {id:uid(),memberId:m6,type:'achat',qte:10,date:'2024-09-01T10:20:00',note:'Pack rentrée'},
+        {id:uid(),memberId:m1,type:'conso',qte:1,date:'2024-09-02T18:30:00',note:''},
+        {id:uid(),memberId:m1,type:'conso',qte:1,date:'2024-09-04T18:30:00',note:''},
+        {id:uid(),memberId:m1,type:'conso',qte:1,date:'2024-09-06T18:30:00',note:''},
+        {id:uid(),memberId:m2,type:'conso',qte:1,date:'2024-09-03T18:30:00',note:''},
+        {id:uid(),memberId:m2,type:'conso',qte:1,date:'2024-09-05T18:30:00',note:''},
+        {id:uid(),memberId:m5,type:'conso',qte:1,date:'2024-09-02T18:30:00',note:''},
+        {id:uid(),memberId:m5,type:'conso',qte:1,date:'2024-09-04T18:30:00',note:''},
+        {id:uid(),memberId:m5,type:'conso',qte:1,date:'2024-09-06T18:30:00',note:''},
+        {id:uid(),memberId:m5,type:'conso',qte:1,date:'2024-09-09T18:30:00',note:''},
+        {id:uid(),memberId:m5,type:'conso',qte:1,date:'2024-09-11T18:30:00',note:''},
+      ],
+      grades: [
+        {id:uid(),memberId:m5,ancien:4,nouveau:5,date:'2024-06-15',instructeur:'Sensei Mori',note:'Excellente technique'},
+        {id:uid(),memberId:m1,ancien:3,nouveau:4,date:'2024-03-20',instructeur:'Sensei Mori',note:'Passage réussi'},
+        {id:uid(),memberId:m2,ancien:1,nouveau:2,date:'2024-01-10',instructeur:'Sensei Mori',note:'Bon travail'},
+      ],
+      news: [
+        {id:uid(),titre:'Rentrée Sportive 2024',contenu:'Bienvenue à tous pour cette nouvelle saison au dojo ! Les cours reprennent le lundi 2 septembre. Nouveaux horaires : enfants 17h-18h, adultes 18h30-20h. Pensez à renouveler votre affiliation et à acheter vos jetons de présence.',date:'2024-08-28T09:00:00',image:''},
+        {id:uid(),titre:'Stage d\'été — Complet',contenu:'Le stage intensif des 15-17 août a réuni 20 participants. Merci à tous ! Prochain stage prévu lors des vacances de Toussaint. Inscriptions ouvertes dès octobre.',date:'2024-08-18T14:00:00',image:''},
+      ],
+      checkedToday: [] // IDs des membres pointés aujourd'hui (mode entraînement)
+    };
+  }
+
+  const App = {
+    data: null,
+    currentPage: 'dashboard',
+    presenceMode: 'gestion', // 'gestion' ou 'training'
+    memberSearch: '',
+
+    load() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        this.data = raw ? JSON.parse(raw) : defaultData();
+        // Réinitialiser checkedToday si changement de jour
+        const today = new Date().toDateString();
+        if (this.data._lastDay !== today) {
+          this.data.checkedToday = [];
+          this.data._lastDay = today;
+        }
+      } catch(e) { this.data = defaultData(); }
+    },
+    save() { localStorage.setItem(STORAGE_KEY, JSON.stringify(this.data)); },
+    getMember(id) { return this.data.members.find(m => m.id === id); },
+    nextNum() { return this.data.members.length ? Math.max(...this.data.members.map(m=>m.num))+1 : 1; },
+  };
+
+  // ============================================================
+  // UTILITAIRES
+  // ============================================================
+  const fmtDate = d => new Date(d).toLocaleDateString('fr-FR',{day:'numeric',month:'long',year:'numeric'});
+  const fmtDateShort = d => new Date(d).toLocaleDateString('fr-FR',{day:'numeric',month:'short'});
+  const fmtDateTime = d => new Date(d).toLocaleDateString('fr-FR',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'});
+  const gradeName = i => GRADES[i] ? GRADES[i].name : '?';
+  const gradeColor = i => GRADES[i] ? GRADES[i].color : '#666';
+  const beltHtml = (gi, label) => `<span class="belt-badge"><span class="belt-dot" style="background:${gradeColor(gi)}"></span>${label||gradeName(gi)}</span>`;
+  const jetonColor = n => n >= 7 ? 'var(--success)' : n >= 3 ? 'var(--warning)' : 'var(--danger)';
+  const jetonBarHtml = n => `<div class="jeton-bar"><div class="jeton-bar-fill" style="width:${Math.min(n*10,100)}%;background:${jetonColor(n)}"></div></div>`;
+
+  function showToast(msg, type='success') {
+    const t = document.createElement('div');
+    t.className = `toast toast-${type}`;
+    const icons = {success:'fa-check-circle',error:'fa-exclamation-circle',info:'fa-info-circle'};
+    t.innerHTML = `<i class="fas ${icons[type]||icons.info}"></i><span>${msg}</span>`;
+    document.getElementById('toast-container').appendChild(t);
+    requestAnimationFrame(() => t.classList.add('show'));
+    setTimeout(() => { t.classList.remove('show'); setTimeout(() => t.remove(), 300); }, 3000);
+  }
+
+  function openModal(html) {
+    document.getElementById('modal-content').innerHTML = `<div class="modal-handle"></div>${html}`;
+    document.getElementById('modal-overlay').classList.add('show');
+  }
+  function closeModal() { document.getElementById('modal-overlay').classList.remove('show'); }
+
+  // ============================================================
+  // NAVIGATION
+  // ============================================================
+  function navigate(page) {
+    App.currentPage = page;
+    App.memberSearch = '';
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.page === page));
+    renderPage();
+  }
+
+  function renderPage() {
+    const el = document.getElementById('page-content');
+    el.classList.remove('page-enter');
+    void el.offsetWidth; // force reflow
+    el.classList.add('page-enter');
+
+    const actions = document.getElementById('header-action');
+    actions.innerHTML = '';
+
+    switch(App.currentPage) {
+      case 'dashboard': renderDashboard(el); break;
+      case 'members': renderMembers(el, actions); break;
+      case 'presence': renderPresence(el, actions); break;
+      case 'grades': renderGrades(el, actions); break;
+      case 'news': renderNews(el, actions); break;
+    }
+  }
+
+  // ============================================================
+  // RENDU — TABLEAU DE BORD
+  // ============================================================
+  function renderDashboard(el) {
+    const m = App.data.members;
+    const actifs = m.filter(x=>x.actif);
+    const totalJetons = m.reduce((s,x)=>s+x.jetons,0);
+    const thisMonth = new Date().getMonth();
+    const passagesMois = App.data.grades.filter(g => new Date(g.date).getMonth()===thisMonth).length;
+    const lastNews = App.data.news.length ? App.data.news[App.data.news.length-1] : null;
+    const recentTx = [...App.data.transactions].sort((a,b)=>new Date(b.date)-new Date(a.date)).slice(0,5);
+
+    el.innerHTML = `
+      <div class="grid grid-cols-2 gap-3 mb-5">
+        <div class="stat-card">
+          <div class="stat-val" style="color:var(--accent)">${actifs.length}</div>
+          <div class="stat-label">Membres actifs</div>
+          <i class="fas fa-users stat-icon" style="color:var(--accent)"></i>
+        </div>
+        <div class="stat-card">
+          <div class="stat-val" style="color:var(--warning)">${totalJetons}</div>
+          <div class="stat-label">Jetons restants</div>
+          <i class="fas fa-ticket stat-icon" style="color:var(--warning)"></i>
+        </div>
+        <div class="stat-card">
+          <div class="stat-val" style="color:var(--success)">${passagesMois}</div>
+          <div class="stat-label">Passages ce mois</div>
+          <i class="fas fa-award stat-icon" style="color:var(--success)"></i>
+        </div>
+        <div class="stat-card">
+          <div class="stat-val" style="color:var(--fg2)">${m.length}</div>
+          <div class="stat-label">Total inscrits</div>
+          <i class="fas fa-clipboard-list stat-icon" style="color:var(--fg2)"></i>
+        </div>
+      </div>
+
+      ${lastNews ? `
+      <div class="mb-5">
+        <h2 class="text-xs font-semibold uppercase tracking-wider mb-3" style="color:var(--muted)">Dernière actualité</h2>
+        <div class="card news-card" onclick="navigate('news')" style="cursor:pointer">
+          <div class="news-date"><i class="far fa-clock"></i> ${fmtDateShort(lastNews.date)}</div>
+          <div class="news-title">${lastNews.titre}</div>
+          <div class="news-excerpt">${lastNews.contenu.substring(0,120)}${lastNews.contenu.length>120?'...':''}</div>
+        </div>
+      </div>` : ''}
+
+      <div class="mb-5">
+        <h2 class="text-xs font-semibold uppercase tracking-wider mb-3" style="color:var(--muted)">Activité récente</h2>
+        <div class="space-y-2">
+          ${recentTx.length ? recentTx.map(tx => {
+            const mem = App.getMember(tx.memberId);
+            if(!mem) return '';
+            const isAchat = tx.type==='achat';
+            return `<div class="card card-sm flex items-center gap-3">
+              <div style="width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;background:${isAchat?'rgba(39,174,96,.12)':'rgba(231,76,60,.1)'};color:${isAchat?'var(--success)':'var(--danger)'};font-size:13px;">
+                <i class="fas ${isAchat?'fa-plus':'fa-minus'}"></i>
+              </div>
+              <div class="flex-1 min-w-0">
+                <div class="text-sm font-medium truncate">${mem.prenom} ${mem.nom}</div>
+                <div class="text-xs" style="color:var(--muted)">${fmtDateTime(tx.date)}</div>
+              </div>
+              <div class="text-sm font-bold" style="color:${isAchat?'var(--success)':'var(--danger)'}">${isAchat?'+':'-'}${tx.qte}</div>
+            </div>`;
+          }).join('') : '<div class="empty-state"><i class="fas fa-history block"></i><p>Aucune activité récente</p></div>'}
+        </div>
+      </div>
+
+      <div>
+        <h2 class="text-xs font-semibold uppercase tracking-wider mb-3" style="color:var(--muted)">Jetons faibles</h2>
+        <div class="space-y-2">
+          ${m.filter(x=>x.actif&&x.jetons<3).length ? m.filter(x=>x.actif&&x.jetons<3).map(mem => `
+            <div class="card card-sm flex items-center gap-3">
+              ${beltHtml(mem.grade)}
+              <div class="flex-1 min-w-0">
+                <div class="text-sm font-medium truncate">${mem.prenom} ${mem.nom}</div>
+              </div>
+              <div class="flex items-center gap-2">
+                ${jetonBarHtml(mem.jetons)}
+                <span class="text-sm font-bold" style="color:${jetonColor(mem.jetons)}">${mem.jetons}</span>
+              </div>
+            </div>
+          `).join('') : '<div class="empty-state"><i class="fas fa-check-circle block"></i><p>Tous les membres ont suffisamment de jetons</p></div>'}
+        </div>
+      </div>
+    `;
+  }
+
+  // ============================================================
+  // RENDU — MEMBRES
+  // ============================================================
+  function renderMembers(el, actions) {
+    actions.innerHTML = `<button class="btn btn-primary btn-sm" onclick="openMemberForm()"><i class="fas fa-plus"></i> Nouveau</button>`;
+
+    const filtered = App.data.members
+      .filter(m => {
+        if(!App.memberSearch) return true;
+        const s = App.memberSearch.toLowerCase();
+        return `${m.prenom} ${m.nom} #${m.num} ${gradeName(m.grade)}`.toLowerCase().includes(s);
+      })
+      .sort((a,b) => a.num - b.num);
+
+    el.innerHTML = `
+      <div class="search-box mb-4">
+        <i class="fas fa-search"></i>
+        <input type="text" placeholder="Rechercher un membre..." value="${App.memberSearch}" oninput="App.memberSearch=this.value;renderPage()">
+      </div>
+      <div class="space-y-2">
+        ${filtered.length ? filtered.map(m => `
+          <div class="card member-card" onclick="openMemberDetail('${m.id}')">
+            <div class="belt-stripe" style="background:${gradeColor(m.grade)};min-height:48px;"></div>
+            <div class="member-info">
+              <div class="flex items-center gap-2 flex-wrap">
+                <span class="text-xs font-mono" style="color:var(--muted)">#${String(m.num).padStart(3,'0')}</span>
+                ${!m.actif ? '<span class="text-xs px-2 py-0.5 rounded-full" style="background:rgba(231,76,60,.15);color:var(--danger);font-weight:600;">Inactif</span>' : ''}
+              </div>
+              <div class="member-name">${m.prenom} ${m.nom}</div>
+              <div class="member-meta">
+                ${beltHtml(m.grade)}
+                <span class="flex items-center gap-1"><i class="fas fa-ticket text-xs" style="color:${jetonColor(m.jetons)}"></i>${m.jetons} jetons</span>
+                <span>Depuis ${fmtDateShort(m.affiliation)}</span>
+              </div>
+            </div>
+            <div class="member-actions">
+              <button class="btn btn-secondary btn-icon btn-sm" onclick="event.stopPropagation();openMemberForm('${m.id}')" aria-label="Modifier"><i class="fas fa-pen"></i></button>
+            </div>
+          </div>
+        `).join('') : '<div class="empty-state"><i class="fas fa-user-slash block"></i><p>Aucun membre trouvé</p></div>'}
+      </div>
+    `;
+  }
+
+  // ============================================================
+  // RENDU — PRÉSENCE
+  // ============================================================
+  function renderPresence(el, actions) {
+    if (App.presenceMode === 'training') {
+      renderTrainingMode(el, actions);
+    } else {
+      renderGestionMode(el, actions);
+    }
+  }
+
+  function renderGestionMode(el, actions) {
+    actions.innerHTML = `
+      <div class="toggle-wrap">
+        <button class="toggle-opt active" onclick="App.presenceMode='gestion';renderPage()">Gestion</button>
+        <button class="toggle-opt" onclick="App.presenceMode='training';renderPage()">Entraînement</button>
+      </div>`;
+
+    const actifs = App.data.members.filter(m=>m.actif).sort((a,b)=>a.num-b.num);
+
+    el.innerHTML = `
+      <div class="mb-5">
+        <h2 class="text-sm font-semibold mb-3" style="color:var(--fg2)">Solde des jetons — Membres actifs</h2>
+        <div class="space-y-2">
+          ${actifs.map(m => `
+            <div class="card card-sm flex items-center gap-3">
+              <div class="belt-stripe" style="background:${gradeColor(m.grade)};min-height:40px;"></div>
+              <div class="flex-1 min-w-0">
+                <div class="text-sm font-medium truncate">#${String(m.num).padStart(3,'0')} ${m.prenom} ${m.nom}</div>
+              </div>
+              <div class="flex items-center gap-2">
+                ${jetonBarHtml(m.jetons)}
+                <span class="text-sm font-bold" style="color:${jetonColor(m.jetons)};min-width:20px;text-align:right">${m.jetons}</span>
+              </div>
+              <button class="btn btn-primary btn-icon btn-sm" onclick="consumeJetons('${m.id}')" title="Consommer 1 jeton"><i class="fas fa-minus"></i></button>
+              <button class="btn btn-success btn-icon btn-sm" onclick="buyJetons('${m.id}')" title="Acheter 10 jetons"><i class="fas fa-plus"></i></button>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+
+      <div>
+        <h2 class="text-sm font-semibold mb-3" style="color:var(--fg2)">Historique des transactions</h2>
+        <div class="space-y-2">
+          ${[...App.data.transactions].sort((a,b)=>new Date(b.date)-new Date(a.date)).slice(0,20).map(tx => {
+            const mem = App.getMember(tx.memberId);
+            if(!mem) return '';
+            const isA = tx.type==='achat';
+            return `<div class="card card-sm flex items-center gap-3">
+              <div style="width:28px;height:28px;border-radius:6px;display:flex;align-items:center;justify-content:center;background:${isA?'rgba(39,174,96,.1)':'rgba(231,76,60,.08)'};color:${isA?'var(--success)':'var(--danger)'};font-size:11px;">
+                <i class="fas ${isA?'fa-arrow-down':'fa-arrow-up'}"></i>
+              </div>
+              <div class="flex-1 min-w-0">
+                <div class="text-xs font-medium truncate">${mem.prenom} ${mem.nom}</div>
+                <div class="text-xs" style="color:var(--muted)">${fmtDateTime(tx.date)}${tx.note?' — '+tx.note:''}</div>
+              </div>
+              <span class="text-xs font-bold" style="color:${isA?'var(--success)':'var(--danger)'}">${isA?'+':'-'}${tx.qte}</span>
+            </div>`;
+          }).join('')}
+        </div>
+      </div>
+    `;
+  }
+
+  function renderTrainingMode(el, actions) {
+    actions.innerHTML = `
+      <div class="toggle-wrap">
+        <button class="toggle-opt" onclick="App.presenceMode='gestion';renderPage()">Gestion</button>
+        <button class="toggle-opt active" onclick="App.presenceMode='training';renderPage()">Entraînement</button>
+      </div>`;
+
+    const actifs = App.data.members.filter(m=>m.actif).sort((a,b)=>a.num-b.num);
+    const checkedCount = App.data.checkedToday.length;
+
+    el.innerHTML = `
+      <div class="mb-4 flex items-center justify-between">
+        <div>
+          <h2 class="text-lg font-bold">Pointage du jour</h2>
+          <p class="text-xs" style="color:var(--muted)">${new Date().toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long',year:'numeric'})}</p>
+        </div>
+        <div class="text-right">
+          <div class="text-2xl font-bold" style="color:var(--accent)">${checkedCount}</div>
+          <div class="text-xs" style="color:var(--muted)">présents</div>
+        </div>
+      </div>
+      <div class="search-box mb-4">
+        <i class="fas fa-search"></i>
+        <input type="text" placeholder="Chercher un membre..." id="training-search" oninput="filterTraining(this.value)">
+      </div>
+      <div class="space-y-2" id="training-list">
+        ${actifs.map(m => {
+          const checked = App.data.checkedToday.includes(m.id);
+          return `<div class="training-item" data-name="${m.prenom} ${m.nom}" data-id="${m.id}">
+            <button class="training-btn ${checked?'checked':''}" onclick="toggleTrainingCheck('${m.id}',this)" ${checked?'disabled':''}>
+              <i class="fas ${checked?'fa-check-circle':'fa-circle'}" style="font-size:20px"></i>
+              <div class="text-left">
+                <div class="font-semibold">${m.prenom} ${m.nom}</div>
+                <div class="text-xs" style="color:var(--muted)">${beltHtml(m.grade)} <span style="margin-left:6px">${m.jetons} jetons</span></div>
+              </div>
+            </button>
+          </div>`;
+        }).join('')}
+      </div>
+    `;
+  }
+
+  function filterTraining(q) {
+    q = q.toLowerCase();
+    document.querySelectorAll('.training-item').forEach(el => {
+      el.style.display = el.dataset.name.toLowerCase().includes(q) ? '' : 'none';
+    });
+  }
+
+  function toggleTrainingCheck(id, btn) {
+    if (App.data.checkedToday.includes(id)) return;
+    const mem = App.getMember(id);
+    if (!mem) return;
+    if (mem.jetons <= 0) {
+      showToast(`${mem.prenom} n'a plus de jetons !`, 'error');
+      return;
+    }
+    // Consommer un jeton
+    mem.jetons--;
+    App.data.transactions.push({id:uid(),memberId:id,type:'conso',qte:1,date:new Date().toISOString(),note:'Pointage entraînement'});
+    App.data.checkedToday.push(id);
+    App.save();
+    btn.classList.add('checked');
+    btn.disabled = true;
+    btn.querySelector('i').className = 'fas fa-check-circle';
+    showToast(`${mem.prenom} présent !`, 'success');
+    // Mettre à jour le compteur
+    const countEl = document.querySelector('.text-2xl.font-bold[style*="accent"]');
+    if (countEl) countEl.textContent = App.data.checkedToday.length;
+  }
+
+  // ============================================================
+  // RENDU — GRADES
+  // ============================================================
+  function renderGrades(el, actions) {
+    actions.innerHTML = `<button class="btn btn-primary btn-sm" onclick="openGradeForm()"><i class="fas fa-plus"></i> Passage</button>`;
+
+    const passages = [...App.data.grades].sort((a,b)=>new Date(b.date)-new Date(a.date));
+
+    // Progression visuelle des ceintures
+    const gradeDistribution = GRADES.slice(0,6).map((g,i) => {
+      const count = App.data.members.filter(m=>m.grade===i&&m.actif).length;
+      return { ...g, count };
+    });
+
+    el.innerHTML = `
+      <div class="mb-6">
+        <h2 class="text-xs font-semibold uppercase tracking-wider mb-3" style="color:var(--muted)">Répartition des ceintures</h2>
+        <div class="card" style="padding:16px;">
+          <div class="flex gap-1 mb-2" style="height:8px;border-radius:4px;overflow:hidden;">
+            ${gradeDistribution.map(g => {
+              const w = App.data.members.filter(m=>m.actif).length ? (g.count / App.data.members.filter(m=>m.actif).length * 100) : 0;
+              return w > 0 ? `<div style="flex:${w};background:${g.color};min-width:2px;" title="${g.name}: ${g.count}"></div>` : '';
+            }).join('')}
+          </div>
+          <div class="flex flex-wrap gap-3 mt-3">
+            ${gradeDistribution.filter(g=>g.count>0).map(g => `
+              <div class="flex items-center gap-1.5 text-xs">
+                <span style="width:8px;height:8px;border-radius:50%;background:${g.color};display:inline-block;border:1px solid rgba(255,255,255,.15);"></span>
+                <span style="color:var(--fg2)">${g.name}</span>
+                <span class="font-bold">${g.count}</span>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <h2 class="text-xs font-semibold uppercase tracking-wider mb-3" style="color:var(--muted)">Historique des passages</h2>
+        <div class="grade-timeline">
+          ${passages.length ? passages.map(g => {
+            const mem = App.getMember(g.memberId);
+            if(!mem) return '';
+            return `<div class="grade-event">
+              <div class="card card-sm">
+                <div class="flex items-center gap-2 mb-1">
+                  <span class="text-sm font-bold">${mem.prenom} ${mem.nom}</span>
+                </div>
+                <div class="flex items-center gap-2 flex-wrap">
+                  ${beltHtml(g.ancien)}
+                  <i class="fas fa-arrow-right text-xs" style="color:var(--muted)"></i>
+                  ${beltHtml(g.nouveau)}
+                </div>
+                <div class="text-xs mt-2" style="color:var(--muted)">
+                  <i class="far fa-calendar"></i> ${fmtDate(g.date)}
+                  ${g.instructeur ? ` — <i class="fas fa-user-tie"></i> ${g.instructeur}` : ''}
+                </div>
+                ${g.note ? `<div class="text-xs mt-1" style="color:var(--fg2)">${g.note}</div>` : ''}
+              </div>
+            </div>`;
+          }).join('') : '<div class="empty-state"><i class="fas fa-award block"></i><p>Aucun passage de grade enregistré</p></div>'}
+        </div>
+      </div>
+    `;
+  }
+
+  // ============================================================
+  // RENDU — ACTUALITÉS
+  // ============================================================
+  function renderNews(el, actions) {
+    actions.innerHTML = `<button class="btn btn-primary btn-sm" onclick="openNewsForm()"><i class="fas fa-plus"></i> Nouvelle</button>`;
+
+    const news = [...App.data.news].sort((a,b)=>new Date(b.date)-new Date(a.date));
+
+    el.innerHTML = `
+      <div class="space-y-3">
+        ${news.length ? news.map(n => `
+          <div class="card news-card">
+            <div class="news-date"><i class="far fa-clock"></i> ${fmtDate(n.date)}</div>
+            <div class="news-title">${n.titre}</div>
+            <div class="news-excerpt">${n.contenu}</div>
+            <div class="news-actions">
+              <button class="btn btn-secondary btn-sm" onclick="openNewsForm('${n.id}')"><i class="fas fa-pen"></i> Modifier</button>
+              <button class="btn btn-danger btn-sm" onclick="deleteNews('${n.id}')"><i class="fas fa-trash"></i> Supprimer</button>
+            </div>
+          </div>
+        `).join('') : '<div class="empty-state"><i class="fas fa-newspaper block"></i><p>Aucune actualité publiée</p></div>'}
+      </div>
+    `;
+  }
+
+  // ============================================================
+  // MODALES — MEMBRES
+  // ============================================================
+  function openMemberForm(id) {
+    const m = id ? App.getMember(id) : null;
+    const title = m ? 'Modifier le membre' : 'Nouveau membre';
+    const num = m ? m.num : App.nextNum();
+
+    openModal(`
+      <h2 class="modal-title">${title}</h2>
+      <form onsubmit="saveMember(event,'${id||''}')">
+        <div class="form-group">
+          <label class="form-label">N° Affiliation</label>
+          <input class="form-input" value="#${String(num).padStart(3,'0')}" disabled style="opacity:.5">
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div class="form-group">
+            <label class="form-label">Prénom</label>
+            <input class="form-input" id="f-prenom" required value="${m?m.prenom:''}">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Nom</label>
+            <input class="form-input" id="f-nom" required value="${m?m.nom:''}">
+          </div>
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div class="form-group">
+            <label class="form-label">Date de naissance</label>
+            <input class="form-input" type="date" id="f-naissance" value="${m?m.naissance:''}">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Date d'affiliation</label>
+            <input class="form-input" type="date" id="f-affiliation" required value="${m?m.affiliation:new Date().toISOString().split('T')[0]}">
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Grade (Ceinture)</label>
+          <select class="form-select" id="f-grade">
+            ${GRADES.map((g,i) => `<option value="${i}" ${(m?m.grade:0)===i?'selected':''}>${g.name}</option>`).join('')}
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Email</label>
+          <input class="form-input" type="email" id="f-email" value="${m?m.email:''}">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Téléphone</label>
+          <input class="form-input" type="tel" id="f-tel" value="${m?m.tel:''}">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Statut</label>
+          <select class="form-select" id="f-actif">
+            <option value="1" ${!m||m.actif?'selected':''}>Actif</option>
+            <option value="0" ${m&&!m.actif?'selected':''}>Inactif</option>
+          </select>
+        </div>
+        <div class="flex gap-3 mt-4">
+          <button type="submit" class="btn btn-primary flex-1">${m?'Enregistrer':'Ajouter'}</button>
+          <button type="button" class="btn btn-secondary" onclick="closeModal()">Annuler</button>
+        </div>
+      </form>
+    `);
+  }
+
+  function saveMember(e, id) {
+    e.preventDefault();
+    const data = {
+      prenom: document.getElementById('f-prenom').value.trim(),
+      nom: document.getElementById('f-nom').value.trim(),
+      naissance: document.getElementById('f-naissance').value,
+      affiliation: document.getElementById('f-affiliation').value,
+      grade: parseInt(document.getElementById('f-grade').value),
+      email: document.getElementById('f-email').value.trim(),
+      tel: document.getElementById('f-tel').value.trim(),
+      actif: document.getElementById('f-actif').value === '1',
+    };
+    if (id) {
+      const m = App.getMember(id);
+      Object.assign(m, data);
+      showToast('Membre modifié avec succès');
+    } else {
+      App.data.members.push({ id: uid(), num: App.nextNum(), ...data, jetons: 0 });
+      showToast('Membre ajouté avec succès');
+    }
+    App.save();
+    closeModal();
+    renderPage();
+  }
+
+  function openMemberDetail(id) {
+    const m = App.getMember(id);
+    if (!m) return;
+    const txs = App.data.transactions.filter(t=>t.memberId===id).sort((a,b)=>new Date(b.date)-new Date(a.date));
+    const gradeHistory = App.data.grades.filter(g=>g.memberId===id).sort((a,b)=>new Date(b.date)-new Date(a.date));
+    const age = m.naissance ? Math.floor((Date.now()-new Date(m.naissance).getTime())/(365.25*24*3600000)) : null;
+
+    openModal(`
+      <div class="flex items-center gap-4 mb-5">
+        <div style="width:56px;height:56px;border-radius:14px;background:${gradeColor(m.grade)};display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:900;color:${m.grade>=6?'#fff':'#111'};font-family:'Cinzel',serif;">
+          ${m.prenom[0]}${m.nom[0]}
+        </div>
+        <div>
+          <div class="text-lg font-bold">${m.prenom} ${m.nom}</div>
+          <div class="text-xs" style="color:var(--muted)">#${String(m.num).padStart(3,'0')} — ${m.actif?'Actif':'Inactif'}${age!==null?' — '+age+' ans':''}</div>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-2 gap-3 mb-4">
+        <div class="card card-sm text-center">
+          <div class="text-xl font-bold" style="color:${jetonColor(m.jetons)}">${m.jetons}</div>
+          <div class="text-xs" style="color:var(--muted)">Jetons restants</div>
+        </div>
+        <div class="card card-sm text-center">
+          ${beltHtml(m.grade)}
+          <div class="text-xs mt-1" style="color:var(--muted)">Grade actuel</div>
+        </div>
+      </div>
+
+      <div class="mb-4">
+        <div class="text-xs mb-1" style="color:var(--muted)">Affilié depuis</div>
+        <div class="text-sm font-medium">${fmtDate(m.affiliation)}</div>
+      </div>
+      ${m.email ? `<div class="mb-2"><div class="text-xs" style="color:var(--muted)">Email</div><div class="text-sm">${m.email}</div></div>` : ''}
+      ${m.tel ? `<div class="mb-4"><div class="text-xs" style="color:var(--muted)">Téléphone</div><div class="text-sm">${m.tel}</div></div>` : ''}
+
+      <div class="flex gap-2 mb-4">
+        <button class="btn btn-success btn-sm flex-1" onclick="closeModal();buyJetons('${m.id}')"><i class="fas fa-plus"></i> Acheter 10 jetons</button>
+        <button class="btn btn-primary btn-sm flex-1" onclick="closeModal();openGradeForm('${m.id}')"><i class="fas fa-award"></i> Passer grade</button>
+      </div>
+
+      ${gradeHistory.length ? `
+      <div class="mb-4">
+        <h3 class="text-xs font-semibold uppercase tracking-wider mb-2" style="color:var(--muted)">Historique des grades</h3>
+        <div class="space-y-1">
+          ${gradeHistory.map(g => `
+            <div class="flex items-center gap-2 text-sm">
+              <span style="color:var(--muted);font-size:11px;min-width:70px">${fmtDateShort(g.date)}</span>
+              ${beltHtml(g.ancien)} <i class="fas fa-arrow-right text-xs" style="color:var(--muted)"></i> ${beltHtml(g.nouveau)}
+            </div>
+          `).join('')}
+        </div>
+      </div>` : ''}
+
+      ${txs.length ? `
+      <div>
+        <h3 class="text-xs font-semibold uppercase tracking-wider mb-2" style="color:var(--muted)">Dernières transactions</h3>
+        <div class="space-y-1" style="max-height:150px;overflow-y:auto">
+          ${txs.slice(0,10).map(tx => {
+            const isA = tx.type==='achat';
+            return `<div class="flex items-center gap-2 text-sm">
+              <span style="color:var(--muted);font-size:11px;min-width:70px">${fmtDateTime(tx.date)}</span>
+              <i class="fas ${isA?'fa-arrow-down':'fa-arrow-up'}" style="color:${isA?'var(--success)':'var(--danger)'};font-size:10px"></i>
+              <span class="font-bold" style="color:${isA?'var(--success)':'var(--danger)'}">${isA?'+':'-'}${tx.qte}</span>
+              ${tx.note?`<span class="text-xs" style="color:var(--muted)">${tx.note}</span>`:''}
+            </div>`;
+          }).join('')}
+        </div>
+      </div>` : ''}
+
+      <div class="flex gap-2 mt-5">
+        <button class="btn btn-secondary btn-sm flex-1" onclick="closeModal();openMemberForm('${m.id}')"><i class="fas fa-pen"></i> Modifier</button>
+        <button class="btn btn-danger btn-sm" onclick="deleteMember('${m.id}')"><i class="fas fa-trash"></i></button>
+      </div>
+    `);
+  }
+
+  function deleteMember(id) {
+    const m = App.getMember(id);
+    if (!m) return;
+    openModal(`
+      <h2 class="modal-title">Supprimer le membre</h2>
+      <p class="mb-4" style="color:var(--fg2)">Voulez-vous vraiment supprimer <strong>${m.prenom} ${m.nom}</strong> ? Cette action est irréversible.</p>
+      <div class="flex gap-3">
+        <button class="btn btn-danger flex-1" onclick="confirmDeleteMember('${id}')">Supprimer</button>
+        <button class="btn btn-secondary" onclick="closeModal()">Annuler</button>
+      </div>
+    `);
+  }
+
+  function confirmDeleteMember(id) {
+    App.data.members = App.data.members.filter(m=>m.id!==id);
+    App.data.transactions = App.data.transactions.filter(t=>t.memberId!==id);
+    App.data.grades = App.data.grades.filter(g=>g.memberId!==id);
+    App.data.checkedToday = App.data.checkedToday.filter(x=>x!==id);
+    App.save();
+    closeModal();
+    showToast('Membre supprimé', 'info');
+    renderPage();
+  }
+
+  // ============================================================
+  // MODALES — JETONS
+  // ============================================================
+  function buyJetons(id) {
+    const m = App.getMember(id);
+    if (!m) return;
+    openModal(`
+      <h2 class="modal-title">Acheter des jetons</h2>
+      <div class="card card-sm mb-4 flex items-center gap-3">
+        <div class="belt-stripe" style="background:${gradeColor(m.grade)};min-height:40px;"></div>
+        <div>
+          <div class="font-semibold">${m.prenom} ${m.nom}</div>
+          <div class="text-xs" style="color:var(--muted)">Solde actuel : ${m.jetons} jetons</div>
+        </div>
+      </div>
+      <div class="card card-sm mb-4 text-center">
+        <div class="text-xs mb-1" style="color:var(--muted)">Pack de 10 jetons</div>
+        <div class="text-2xl font-bold" style="color:var(--success)">${PRIX_PACK} €</div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Nombre de packs</label>
+        <select class="form-select" id="f-packs">
+          <option value="1">1 pack (10 jetons)</option>
+          <option value="2">2 packs (20 jetons)</option>
+          <option value="3">3 packs (30 jetons)</option>
+          <option value="5">5 packs (50 jetons)</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Note (optionnel)</label>
+        <input class="form-input" id="f-note-achat" placeholder="Ex: paiement chèque, espèces...">
+      </div>
+      <div class="flex gap-3 mt-4">
+        <button class="btn btn-success flex-1" onclick="confirmBuyJetons('${id}')"><i class="fas fa-check"></i> Confirmer l'achat</button>
+        <button class="btn btn-secondary" onclick="closeModal()">Annuler</button>
+      </div>
+    `);
+  }
+
+  function confirmBuyJetons(id) {
+    const m = App.getMember(id);
+    if (!m) return;
+    const packs = parseInt(document.getElementById('f-packs').value);
+    const qte = packs * 10;
+    const note = document.getElementById('f-note-achat').value.trim() || `${packs} pack(s) — ${packs*PRIX_PACK}€`;
+    m.jetons += qte;
+    App.data.transactions.push({id:uid(),memberId:id,type:'achat',qte,date:new Date().toISOString(),note});
+    App.save();
+    closeModal();
+    showToast(`+${qte} jetons ajoutés pour ${m.prenom}`);
+    renderPage();
+  }
+
+  function consumeJetons(id) {
+    const m = App.getMember(id);
+    if (!m) return;
+    if (m.jetons <= 0) {
+      showToast(`${m.prenom} n'a plus de jetons !`, 'error');
+      return;
+    }
+    m.jetons--;
+    App.data.transactions.push({id:uid(),memberId:id,type:'conso',qte:1,date:new Date().toISOString(),note:'Consommation manuelle'});
+    App.save();
+    showToast(`1 jeton consommé pour ${m.prenom} (reste ${m.jetons})`, 'info');
+    renderPage();
+  }
+
+  // ============================================================
+  // MODALES — GRADES
+  // ============================================================
+  function openGradeForm(preselectedMemberId) {
+    const actifs = App.data.members.filter(m=>m.actif).sort((a,b)=>a.num-b.num);
+    const selMem = preselectedMemberId ? App.getMember(preselectedMemberId) : null;
+
+    openModal(`
+      <h2 class="modal-title">Passage de grade</h2>
+      <form onsubmit="saveGrade(event)">
+        <div class="form-group">
+          <label class="form-label">Membre</label>
+          <select class="form-select" id="f-grade-member" required onchange="updateGradeOptions()">
+            <option value="">— Sélectionner —</option>
+            ${actifs.map(m => `<option value="${m.id}" ${selMem&&selMem.id===m.id?'selected':''}>#${String(m.num).padStart(3,'0')} ${m.prenom} ${m.nom} (${gradeName(m.grade)})</option>`).join('')}
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Nouveau grade</label>
+          <select class="form-select" id="f-grade-new" required>
+            <option value="">— Sélectionner un membre d'abord —</option>
+          </select>
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div class="form-group">
+            <label class="form-label">Date du passage</label>
+            <input class="form-input" type="date" id="f-grade-date" value="${new Date().toISOString().split('T')[0]}" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Instructeur</label>
+            <input class="form-input" id="f-grade-instr" placeholder="Ex: Sensei Mori" value="Sensei Mori">
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Note (optionnel)</label>
+          <textarea class="form-textarea" id="f-grade-note" placeholder="Commentaires sur le passage..."></textarea>
+        </div>
+        <div class="flex gap-3 mt-4">
+          <button type="submit" class="btn btn-primary flex-1"><i class="fas fa-award"></i> Enregistrer le passage</button>
+          <button type="button" class="btn btn-secondary" onclick="closeModal()">Annuler</button>
+        </div>
+      </form>
+    `);
+    if (selMem) updateGradeOptions();
+  }
+
+  function updateGradeOptions() {
+    const memId = document.getElementById('f-grade-member').value;
+    const sel = document.getElementById('f-grade-new');
+    if (!memId) {
+      sel.innerHTML = '<option value="">— Sélectionner un membre d\'abord —</option>';
+      return;
+    }
+    const m = App.getMember(memId);
+    sel.innerHTML = GRADES.map((g,i) => {
+      const disabled = i <= m.grade ? 'disabled' : '';
+      const selected = i === m.grade + 1 ? 'selected' : '';
+      return `<option value="${i}" ${disabled} ${selected}>${g.name}${i<=m.grade?' (actuel ou inférieur)':''}</option>`;
+    }).join('');
+  }
+
+  function saveGrade(e) {
+    e.preventDefault();
+    const memId = document.getElementById('f-grade-member').value;
+    const newGrade = parseInt(document.getElementById('f-grade-new').value);
+    const m = App.getMember(memId);
+    if (!m || isNaN(newGrade) || newGrade <= m.grade) {
+      showToast('Veuillez sélectionner un grade supérieur', 'error');
+      return;
+    }
+    App.data.grades.push({
+      id: uid(), memberId: memId, ancien: m.grade, nouveau: newGrade,
+      date: document.getElementById('f-grade-date').value,
+      instructeur: document.getElementById('f-grade-instr').value.trim(),
+      note: document.getElementById('f-grade-note').value.trim()
+    });
+    m.grade = newGrade;
+    App.save();
+    closeModal();
+    showToast(`${m.prenom} passe à la ceinture ${gradeName(newGrade)} !`);
+    renderPage();
+  }
+
+  // ============================================================
+  // MODALES — NEWS
+  // ============================================================
+  function openNewsForm(id) {
+    const n = id ? App.data.news.find(x=>x.id===id) : null;
+    openModal(`
+      <h2 class="modal-title">${n?'Modifier l\'actualité':'Nouvelle actualité'}</h2>
+      <form onsubmit="saveNews(event,'${id||''}')">
+        <div class="form-group">
+          <label class="form-label">Titre</label>
+          <input class="form-input" id="f-news-titre" required value="${n?n.titre:''}">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Contenu</label>
+          <textarea class="form-textarea" id="f-news-contenu" required rows="5">${n?n.contenu:''}</textarea>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Date</label>
+          <input class="form-input" type="datetime-local" id="f-news-date" value="${n?n.date.substring(0,16):new Date().toISOString().substring(0,16)}">
+        </div>
+        <div class="flex gap-3 mt-4">
+          <button type="submit" class="btn btn-primary flex-1">${n?'Enregistrer':'Publier'}</button>
+          <button class="btn btn-secondary" onclick="closeModal()">Annuler</button>
+        </div>
+      </form>
+    `);
+  }
+
+  function saveNews(e, id) {
+    e.preventDefault();
+    const data = {
+      titre: document.getElementById('f-news-titre').value.trim(),
+      contenu: document.getElementById('f-news-contenu').value.trim(),
+      date: document.getElementById('f-news-date').value ? new Date(document.getElementById('f-news-date').value).toISOString() : new Date().toISOString(),
+      image: ''
+    };
+    if (id) {
+      const n = App.data.news.find(x=>x.id===id);
+      Object.assign(n, data);
+      showToast('Actualité modifiée');
+    } else {
+      App.data.news.push({ id: uid(), ...data });
+      showToast('Actualité publiée');
+    }
+    App.save();
+    closeModal();
+    renderPage();
+  }
+
+  function deleteNews(id) {
+    const n = App.data.news.find(x=>x.id===id);
+    if (!n) return;
+    openModal(`
+      <h2 class="modal-title">Supprimer l'actualité</h2>
+      <p class="mb-4" style="color:var(--fg2)">Supprimer « <strong>${n.titre}</strong> » ?</p>
+      <div class="flex gap-3">
+        <button class="btn btn-danger flex-1" onclick="App.data.news=App.data.news.filter(x=>x.id!=='${id}');App.save();closeModal();showToast('Actualité supprimée','info');renderPage();">Supprimer</button>
+        <button class="btn btn-secondary" onclick="closeModal()">Annuler</button>
+      </div>
+    `);
+  }
+
+  // ============================================================
+  // PWA — Manifest & Service Worker
+  // ============================================================
+  function setupPWA() {
+    // Générer l'icône SVG en data URI
+    const iconSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><rect width="512" height="512" rx="96" fill="#C41E3A"/><circle cx="256" cy="256" r="140" fill="none" stroke="white" stroke-width="20" opacity=".25"/><circle cx="256" cy="256" r="95" fill="none" stroke="white" stroke-width="16"/><text x="256" y="305" text-anchor="middle" fill="white" font-size="140" font-weight="bold" font-family="serif">道</text></svg>`;
+    const iconUri = 'data:image/svg+xml;base64,' + btoa(iconSvg);
+
+    // Apple touch icon
+    const link = document.createElement('link');
+    link.rel = 'apple-touch-icon';
+    link.href = iconUri;
+    document.head.appendChild(link);
+
+    // Manifest PWA
+    const manifest = {
+      name: 'Dojo Manager — Gestion de Club',
+      short_name: 'Dojo Manager',
+      description: 'Gestion de membres, jetons de présence et grades pour club d\'arts martiaux',
+      start_url: window.location.href.split('?')[0],
+      display: 'standalone',
+      background_color: '#0A0A0A',
+      theme_color: '#C41E3A',
+      orientation: 'portrait',
+      icons: [
+        { src: iconUri, sizes: '512x512', type: 'image/svg+xml', purpose: 'any maskable' }
+      ]
+    };
+    const blob = new Blob([JSON.stringify(manifest)], {type:'application/json'});
+    document.getElementById('manifest-link').href = URL.createObjectURL(blob);
+
+    // Enregistrer le fichier lui-même comme Service Worker
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register(window.location.href, {scope: '/'}).catch(() => {
+        // En cas d'erreur de scope (souvent en file://), on ignore silencieusement
+        // L'app fonctionne parfaitement sans SW, le manifest suffit pour l'installabilité
+      });
+    }
+  }
+
+  // ============================================================
+  // ÉVÉNEMENTS & INITIALISATION
+  // ============================================================
+  // Navigation par les onglets
+  document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => navigate(btn.dataset.page));
+  });
+
+  // Fermer la modale en cliquant à l'extérieur
+  document.getElementById('modal-overlay').addEventListener('click', e => {
+    if (e.target === e.currentTarget) closeModal();
+  });
+
+  // Fermer modale avec Escape
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') closeModal();
+  });
+
+  // Démarrage
+  App.load();
+  setupPWA();
+  renderPage();
+}
+</script>
+</body>
+</html>
